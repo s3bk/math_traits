@@ -1,0 +1,11 @@
+[package]
+name = "math_traits"
+version = "0.1.0"
+authors = ["Sebastian Köln <sebk@rynx.org>"]
+license = "MIT"
+description = "traits to simplify vectorized mathematics"
+
+[dependencies]
+tuple = { version = "0.3.3", features = ["impl_simd"] }
+rand = "0.3.16"
+simd = "0.2.0"
