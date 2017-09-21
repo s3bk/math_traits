@@ -1,5 +1,5 @@
 use std::ops::{Add, Sub, Mul, Div};
-
+use cast::Cast;
 use rand::{Rng};
 use rand::distributions::{IndependentSample, Range as Uniform};
 use std::fmt::Debug;
@@ -18,7 +18,10 @@ pub trait Real:
     fn values(self) -> Self::Iterator;
     
     fn int(v: i16) -> Self;
+    fn float(f: f64) -> Self;
+    
     fn frac(nom: i16, denom: u16) -> Self;
+    #[inline]
     fn inv(self) -> Self {
         <Self as Real>::int(1) / self
     }
@@ -28,11 +31,19 @@ pub trait Real:
     fn abs(self) -> Self;
     fn sqrt(self) -> Self;
     
+    /* TODO: needs simd impl
+    fn sin(self) -> Self;
+    fn cos(self) -> Self;
+    fn exp(self) -> Self;
+    fn ln(self) -> Self;
+    */
+    
     /// if self exeeds at, subtract span
     fn wrap(self, at: Self, span: Self) -> Self;
     
     fn splat(s: Self::Scalar) -> Self;
-    
+
+    #[inline]
     fn clamp(self, min: Self, max: Self) -> Self {
         let clamped_low = min.select(self, self.lt(min));
         max.select(clamped_low, self.gt(max))
@@ -46,9 +57,11 @@ pub trait Real:
 
     // if cont true. then select self, otherwhise other
     fn select(self, other: Self, cond: Self::Bool) -> Self;
+    #[inline]
     fn max(self, other: Self) -> Self {
         self.select(other, self.gt(other))
     }
+    #[inline]
     fn min(self, other: Self) -> Self {
         self.select(other, self.lt(other))
     }
@@ -74,14 +87,19 @@ macro_rules! impl_real {
             
             #[inline(always)]
             fn int(v: i16) -> Self { v.into() }
+            
+            #[inline(always)]
+            fn float(f: f64) -> Self { f.cast().unwrap() }
+
+            #[inline]
             fn frac(nom: i16, denom: u16) -> Self {
                 $t::from(nom) / $t::from(denom)
             }
-            
+            #[inline]
             fn wrap(self, at: Self, span: Self) -> Self {
                 if self > at { self - span } else { self }
             }
-
+            #[inline]
             fn uniform01<R: Rng>(rng: &mut R) -> Self {
                 let uniform01 = Uniform::new(0., 1.);
                 uniform01.ind_sample(rng)
@@ -93,6 +111,20 @@ macro_rules! impl_real {
             #[inline(always)]
             fn sqrt(self) -> Self { self.sqrt() }
 
+            /*
+            #[inline(always)]
+            fn sin(self) -> Self { self.sin() }
+
+            #[inline(always)]
+            fn cos(self) -> Self { self.cos() }
+
+            #[inline(always)]
+            fn exp(self) -> Self { self.exp() }
+
+            #[inline(always)]
+            fn ln(self) -> Self { self.ln() }
+            */
+            
             #[inline(always)]
             fn lt(self, rhs: Self) -> Self::Bool { self < rhs }
 
@@ -148,6 +180,12 @@ macro_rules! impl_simd {
 
             #[inline(always)]
             fn int(v: i16) -> Self { Self::splat($scalar::from(v)) }
+            #[inline]
+            fn float(f: f64) -> Self {
+                let f = f as $scalar;
+                Self::splat($scalar::from(f))
+            }
+            #[inline]
             fn frac(nom: i16, denom: u16) -> Self {
                 Self::splat($scalar::from(nom) / $scalar::from(denom))
             }
@@ -170,6 +208,21 @@ macro_rules! impl_simd {
             fn sqrt(self) -> Self {
                 $trait::sqrt(self)
             }
+
+            /*
+            #[inline(always)]
+            fn sin(self) -> Self { self.sin() }
+
+            #[inline(always)]
+            fn cos(self) -> Self { self.cos() }
+
+            #[inline(always)]
+            fn exp(self) -> Self { self.exp() }
+
+            #[inline(always)]
+            fn ln(self) -> Self { self.ln() }
+            */
+            
             #[inline(always)]
             fn min(self, other: Self) -> Self {
                 $trait::min(self, other)
@@ -229,56 +282,75 @@ macro_rules! tuple_init {
             type Scalar = T;
             type Iterator = IntoElements<Self>;
 
+            #[inline]
             fn splat(s: Self::Scalar) -> Self {
                 $Tuple( $(first_e!(s, $idx),)* )
             }
+            #[inline]
             fn values(self) -> Self::Iterator {
                 self.into_elements()
             }
-            
+
+            #[inline]
             fn int(v: i16) -> Self {
                 $Tuple( $(first_e!(T::int(v), $idx),)* )
             }
+            #[inline]
+            fn float(f: f64) -> Self {
+                $Tuple( $(first_e!(T::float(f), $idx),)* )
+            }
+            #[inline]
             fn frac(nom: i16, denom: u16) -> Self {
                 $Tuple( $(first_e!(T::frac(nom, denom), $idx),)* )
             }
-    
+            
+            #[inline]
             fn uniform01<R: Rng>(rng: &mut R) -> Self {
                 $Tuple( $(first_e!(T::uniform01(rng), $idx),)* )
             }
 
+            #[inline]
             fn abs(self) -> Self {
                 $Tuple( $(T::abs(self.$idx)),* )
             }
 
+            #[inline]
             fn sqrt(self) -> Self {
                 $Tuple( $(T::sqrt(self.$idx)),* )
             }
-            
+
+            #[inline]
             fn wrap(self, at: Self, span: Self) -> Self {
                 $Tuple( $(T::wrap(self.$idx, at.$idx, span.$idx),)* )
             }
-    
+
+            #[inline]
             fn clamp(self, min: Self, max: Self) -> Self {
                 $Tuple( $(T::clamp(self.$idx, min.$idx, max.$idx),)* )
             }
-            
+
+            #[inline]
             fn lt(self, rhs: Self) -> Self::Bool {
                 $Tuple( $(T::lt(self.$idx, rhs.$idx),)* )
             }
+            #[inline]
             fn le(self, rhs: Self) -> Self::Bool {
                 $Tuple( $(T::le(self.$idx, rhs.$idx),)* )
             }
+            #[inline]
             fn gt(self, rhs: Self) -> Self::Bool {
                 $Tuple( $(T::gt(self.$idx, rhs.$idx),)* )
             }
+            #[inline]
             fn ge(self, rhs: Self) -> Self::Bool {
                 $Tuple( $(T::ge(self.$idx, rhs.$idx),)* )
             }
+            #[inline]
             fn eq(self, rhs: Self) -> Self::Bool {
                 $Tuple( $(T::eq(self.$idx, rhs.$idx),)* )
             }
 
+            #[inline]
             fn select(self, other: Self, cond: Self::Bool) -> Self {
                 $Tuple( $(T::select(self.$idx, other.$idx, cond.$idx),)* )
             }
