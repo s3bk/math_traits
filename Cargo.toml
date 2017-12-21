@@ -1,6 +1,6 @@
 [package]
 name = "math_traits"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Sebastian Köln <sebk@rynx.org>"]
 license = "MIT"
 description = "traits to simplify vectorized mathematics"
