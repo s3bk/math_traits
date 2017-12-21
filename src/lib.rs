@@ -1,3 +1,4 @@
+#![feature(core_intrinsics)]
 #![feature(cfg_target_feature)]
 #![feature(inclusive_range_syntax, inclusive_range)]
 #![feature(i128_type)]

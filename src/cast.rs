@@ -75,12 +75,14 @@ macro_rules! impl_cast_checked {
                 }
                 #[inline(always)]
                 fn cast_clamped(self, r: RangeInclusive<$dst>) -> $dst {
-                    if self < r.start as $src {
-                        r.start
-                    } else if self > r.end as $src {
-                        r.end
+                    if self >= r.start as $src {
+                        if self <= r.end as $src {
+                            self as $dst
+                        } else {
+                            r.end
+                        }
                     } else {
-                        self as $dst
+                        r.start
                     }
                 }
             }
@@ -89,10 +91,10 @@ macro_rules! impl_cast_checked {
 }
 #[test]
 fn test_clip_checked() {
-    assert_eq!((-3f32).cast_clipped(0u16...5), None);
-    assert_eq!(8f32.cast_clipped(0u16...5), None);
-    assert_eq!(3f32.cast_clipped(0u16...5), Some(3));
-    assert_eq!(100f32.cast_clipped(0usize...1000), Some(100));
+    assert_eq!((-3f32).cast_clipped(0u16..=5), None);
+    assert_eq!(8f32.cast_clipped(0u16..=5), None);
+    assert_eq!(3f32.cast_clipped(0u16..=5), Some(3));
+    assert_eq!(100f32.cast_clipped(0usize..=1000), Some(100));
 }
 
 macro_rules! impl_cast_signed {
@@ -291,14 +293,14 @@ macro_rules! impl_cast {
             }
             #[inline(always)]
             fn cast_clipped(self, r: RangeInclusive<$Tuple<$($t),*>>) -> Option<$Tuple<$($t),*>> {
-                match ( $(self.$idx.cast_clipped(r.start.$idx ... r.end.$idx), )* ) {
+                match ( $(self.$idx.cast_clipped(r.start.$idx ..= r.end.$idx), )* ) {
                     ( $( Some($t), )* ) => Some($Tuple($($t),*)),
                     _ => None
                 }
             }
             #[inline(always)]
             fn cast_clamped(self, r: RangeInclusive<$Tuple<$($t),*>>) -> $Tuple<$($t),*> {
-                $Tuple( $(self.$idx.cast_clamped(r.start.$idx ... r.end.$idx)),* )
+                $Tuple( $(self.$idx.cast_clamped(r.start.$idx ..= r.end.$idx)),* )
             }
         }
     )*)

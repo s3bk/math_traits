@@ -3,7 +3,8 @@ use cast::Cast;
 use rand::{Rng};
 use rand::distributions::{IndependentSample, Range as Uniform};
 use std::fmt::Debug;
-
+use std::intrinsics::{fmaf32, fmaf64};
+                      
 use tuple::*;
 //Float + NumCast + SampleRange + PartialOrd + Clone + Add + Debug
 pub trait Real:
@@ -28,7 +29,10 @@ pub trait Real:
     
     fn uniform01<R: Rng>(rng: &mut R) -> Self;
 
+    /// |x|
     fn abs(self) -> Self;
+
+    /// sqrt(x)
     fn sqrt(self) -> Self;
     
     /* TODO: needs simd impl
@@ -37,6 +41,12 @@ pub trait Real:
     fn exp(self) -> Self;
     fn ln(self) -> Self;
     */
+
+    /// self * b + c
+    #[inline]
+    fn mul_add(self, b: Self, c: Self) -> Self {
+        self * b + c
+    }
     
     /// if self exeeds at, subtract span
     fn wrap(self, at: Self, span: Self) -> Self;
@@ -68,7 +78,7 @@ pub trait Real:
 }
 
 macro_rules! impl_real {
-    ($($t:ident),*) => ( $(
+    ($($t:ident : $fma:ident),*) => ( $(
         impl Real for $t {
             const PI: Self = ::std::$t::consts::PI;
             type Bool = bool;
@@ -105,6 +115,12 @@ macro_rules! impl_real {
                 uniform01.ind_sample(rng)
             }
 
+            #[cfg(target_feature="fma")]
+            #[inline]
+            fn mul_add(self, b: Self, c: Self) -> Self {
+                unsafe { $fma(self, b, c) }
+            }
+            
             #[inline(always)]
             fn abs(self) -> Self { self.abs() }
 
@@ -148,7 +164,7 @@ macro_rules! impl_real {
     )* )
 }
 
-impl_real!(f32, f64);
+impl_real!(f32: fmaf32, f64: fmaf64);
 
 macro_rules! first_t {
     ($A:ty, $B:tt) => ($A)
@@ -175,7 +191,9 @@ macro_rules! impl_simd {
             
             #[inline(always)]
             fn values(self) -> Self::Iterator {
-                $Tuple::from(self).into_elements()
+                let mut arr = [$(first_e!(0., $idx)),*];
+                self.store(&mut arr, 0);
+                $Tuple::from(arr).into_elements()
             }
 
             #[inline(always)]
@@ -198,6 +216,12 @@ macro_rules! impl_simd {
             fn uniform01<R: Rng>(rng: &mut R) -> Self {
                 let uniform01 = Uniform::new(0., 1.);
                 $simd::new($(first_e!(uniform01.ind_sample(rng), $idx)),*)
+            }
+
+            #[cfg(target_feature="fma")]
+            #[inline]
+            fn mul_add(self, b: Self, c: Self) -> Self {
+                Fma::mul_add(self, b, c)
             }
 
             #[inline(always)]
@@ -253,14 +277,14 @@ macro_rules! impl_simd {
         }
     )* )
 }
-        
+
+use simd::{f32x4, bool32fx4};
+
 #[cfg(target_feature = "mmx")]
-use simd::{f32x4, bool32fx4, u32x4, i32x4};
-#[cfg(target_feature = "mmx")]
-impl_simd!(f32x4: f32, bool32fx4, Sse2F32x4, T4(0 1 2 3));
+impl_simd!(f32x4: f32, bool32fx4, f32x4, T4(0 1 2 3));
 
 #[cfg(target_feature = "sse2")]
-use simd::x86::sse2::{f64x2, bool64fx2, Sse2F64x2};
+use simd::x86::sse2::{Sse2F64x2, f64x2, bool64fx2};
 #[cfg(target_feature = "sse2")]
 impl_simd!(f64x2: f64, bool64fx2, Sse2F64x2, T2(0 1));
 
@@ -272,6 +296,9 @@ impl_simd!(
     f64x4: f64, bool64fx4, AvxF64x4, T4(0 1 2 3)
 );
         
+#[cfg(target_feature="fma")]
+use simd::Fma;
+
 macro_rules! tuple_init {
     ($($Tuple:ident { $($T:ident . $t:ident . $idx:tt),* } )*) => ($(
     
