@@ -6,6 +6,6 @@ license = "MIT"
 description = "traits to simplify vectorized mathematics"
 
 [dependencies]
-tuple = { version = "0.3.3", features = ["impl_simd"] }
-rand = "0.3.16"
+tuple = { git = "https://github.com/s3bk/tuple.git", features = ["impl_simd"] }
+rand = "0.4.1"
 simd = { version = "0.2.0", git = "https://github.com/s3bk/simd.git" }
