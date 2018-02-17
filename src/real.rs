@@ -3,8 +3,9 @@ use cast::Cast;
 use rand::{Rng};
 use rand::distributions::{IndependentSample, Range as Uniform};
 use std::fmt::Debug;
-use std::intrinsics::{fmaf32, fmaf64};
-                      
+use stdsimd::vendor::*;
+use std::mem::transmute;
+
 use tuple::*;
 //Float + NumCast + SampleRange + PartialOrd + Clone + Add + Debug
 pub trait Real:
@@ -33,7 +34,9 @@ pub trait Real:
     fn abs(self) -> Self;
 
     /// sqrt(x)
-    fn sqrt(self) -> Self;
+    fn sqrt(self) -> Self { unimplemented!() }
+    
+    fn pow(self) -> Self { unimplemented!() }
     
     /* TODO: needs simd impl
     fn sin(self) -> Self;
@@ -176,8 +179,15 @@ macro_rules! first_e {
     ($a:expr, $b:tt) => ($a)
 }
 
+// highly unsafe macro
+macro_rules! call {
+    ($pre:ident, $name:ident, $post:ident ( $($arg:expr),* ) ) => (
+        unsafe { transmute(concat_idents!($pre, $name, $post)( $( transmute($arg) ),* )) }
+    )
+}
+
 macro_rules! impl_simd {
-    ($($simd:ident: $scalar:ident, $bool:ty, $trait:ident, $Tuple:ident($($idx:tt)*));*) => ( $(
+    ($($simd:ident: $scalar:ident, $bool:ty, $pre:ident ~ $post:ident, $Tuple:ident($($idx:tt)*));*) => ( $(
         impl Real for $simd {
             const PI: Self = $simd::splat(::std::$scalar::consts::PI);
             type Bool = $bool;
@@ -210,7 +220,7 @@ macro_rules! impl_simd {
 
             #[inline(always)]
             fn wrap(self, at: Self, span: Self) -> Self {
-                self.gt(at).select(self - span, self)
+                Real::select(self - span, self, self.gt(at))
             }
             
             fn uniform01<R: Rng>(rng: &mut R) -> Self {
@@ -226,11 +236,11 @@ macro_rules! impl_simd {
 
             #[inline(always)]
             fn abs(self) -> Self {
-                self.le(Self::splat(0.0)).select(-self, self)
+                Real::select(-self, self, self.le(Self::splat(0.0)))
             }
             #[inline(always)]
             fn sqrt(self) -> Self {
-                $trait::sqrt(self)
+                call!($pre, sqrt, $post (self))
             }
 
             /*
@@ -249,11 +259,11 @@ macro_rules! impl_simd {
             
             #[inline(always)]
             fn min(self, other: Self) -> Self {
-                $trait::min(self, other)
+                call!($pre, min, $post (self, other))
             }
             #[inline(always)]
             fn max(self, other: Self) -> Self {
-                $trait::max(self, other)
+                call!($pre, max, $post (self, other))
             }
             #[inline(always)]
             fn lt(self, rhs: Self) -> Self::Bool { $simd::lt(self, rhs) }
@@ -272,32 +282,25 @@ macro_rules! impl_simd {
 
             #[inline(always)]
             fn select(self, other: Self, cond: Self::Bool) -> Self {
-                cond.select(self, other)
+                call!($pre, blendv, $post (self, other, cond))
             }
         }
     )* )
 }
 
-use simd::{f32x4, bool32fx4};
+use stdsimd::simd::*;
 
 #[cfg(target_feature = "mmx")]
-impl_simd!(f32x4: f32, bool32fx4, f32x4, T4(0 1 2 3));
+impl_simd!(f32x4: f32, i32x4, _mm_ ~ _ps, T4(0 1 2 3));
 
 #[cfg(target_feature = "sse2")]
-use simd::x86::sse2::{Sse2F64x2, f64x2, bool64fx2};
-#[cfg(target_feature = "sse2")]
-impl_simd!(f64x2: f64, bool64fx2, Sse2F64x2, T2(0 1));
+impl_simd!(f64x2: f64, i64x2, _mm_ ~ _pd, T2(0 1));
 
-#[cfg(target_feature = "avx")]
-use simd::x86::avx::{f32x8, f64x4, bool32fx8, bool64fx4, AvxF32x8, AvxF64x4};
 #[cfg(target_feature = "avx")]
 impl_simd!(
-    f32x8: f32, bool32fx8, AvxF32x8, T8(0 1 2 3 4 5 6 7);
-    f64x4: f64, bool64fx4, AvxF64x4, T4(0 1 2 3)
+    f32x8: f32, bool32fx8, _mm256_ ~ _ps, T8(0 1 2 3 4 5 6 7);
+    f64x4: f64, bool64fx4, _mm256_ ~ _pd, T4(0 1 2 3)
 );
-        
-#[cfg(target_feature="fma")]
-use simd::Fma;
 
 macro_rules! tuple_init {
     ($($Tuple:ident { $($T:ident . $t:ident . $idx:tt),* } )*) => ($(
