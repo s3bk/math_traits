@@ -3,7 +3,6 @@ use cast::Cast;
 use rand::{Rng};
 use rand::distributions::{IndependentSample, Range as Uniform};
 use std::fmt::Debug;
-use stdsimd::vendor::*;
 use std::mem::transmute;
 
 use tuple::*;
@@ -182,7 +181,10 @@ macro_rules! first_e {
 // highly unsafe macro
 macro_rules! call {
     ($pre:ident, $name:ident, $post:ident ( $($arg:expr),* ) ) => (
-        unsafe { transmute(concat_idents!($pre, $name, $post)( $( transmute($arg) ),* )) }
+        unsafe {
+            use stdsimd::vendor::*;
+            transmute(concat_idents!($pre, $name, $post)( $( transmute($arg) ),* ))
+        }
     )
 }
 
