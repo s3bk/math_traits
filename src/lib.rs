@@ -4,6 +4,8 @@
 #![feature(i128_type)]
 #![feature(const_fn)]
 #![feature(concat_idents)]
+#![cfg(feature="impl_simd")]
+#![feature(stdsimd)]
 
 extern crate rand;
 extern crate tuple;

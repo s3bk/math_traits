@@ -182,7 +182,7 @@ macro_rules! first_e {
 macro_rules! call {
     ($pre:ident, $name:ident, $post:ident ( $($arg:expr),* ) ) => (
         unsafe {
-            use stdsimd::vendor::*;
+            use stdsimd::arch::x86_64::*;
             transmute(concat_idents!($pre, $name, $post)( $( transmute($arg) ),* ))
         }
     )
