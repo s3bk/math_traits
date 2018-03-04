@@ -290,15 +290,16 @@ macro_rules! impl_simd {
     )* )
 }
 
+#[cfg(feature="impl_simd")]
 use stdsimd::simd::*;
 
-#[cfg(target_feature = "mmx")]
+#[cfg(all(feature="impl_simd", target_feature = "mmx"))]
 impl_simd!(f32x4: f32, i32x4, _mm_ ~ _ps, T4(0 1 2 3));
 
-#[cfg(target_feature = "sse2")]
+#[cfg(all(feature="impl_simd", target_feature = "sse2"))]
 impl_simd!(f64x2: f64, i64x2, _mm_ ~ _pd, T2(0 1));
 
-#[cfg(target_feature = "avx")]
+#[cfg(all(feature="impl_simd", target_feature = "avx"))]
 impl_simd!(
     f32x8: f32, bool32fx8, _mm256_ ~ _ps, T8(0 1 2 3 4 5 6 7);
     f64x4: f64, bool64fx4, _mm256_ ~ _pd, T4(0 1 2 3)

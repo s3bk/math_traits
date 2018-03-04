@@ -4,15 +4,16 @@
 #![feature(i128_type)]
 #![feature(const_fn)]
 #![feature(concat_idents)]
-#![cfg(feature="impl_simd")]
-#![feature(stdsimd)]
+#![cfg_attr(feature="impl_simd", feature(stdsimd))]
 
 extern crate rand;
 extern crate tuple;
+
+#[cfg(feature="impl_simd")]
 extern crate stdsimd;
 
 pub mod real;
 pub mod cast;
 
-pub use real::*;
+pub use real::Real;
 pub use cast::*;
