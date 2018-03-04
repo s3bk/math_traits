@@ -4,8 +4,12 @@ version = "0.1.2"
 authors = ["Sebastian Köln <sebk@rynx.org>"]
 license = "MIT"
 description = "traits to simplify vectorized mathematics"
+features = ["simd"]
 
 [dependencies]
-tuple = { git = "https://github.com/s3bk/tuple", features = ["impl_simd"] }
+tuple = { git = "https://github.com/s3bk/tuple" }
 rand = "0.4.1"
 stdsimd = { git = "https://github.com/rust-lang-nursery/stdsimd" }
+
+[features]
+simd = ["tuple/impl_simd"]
