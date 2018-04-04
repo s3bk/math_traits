@@ -7,6 +7,7 @@
 #![cfg_attr(feature="simd", feature(stdsimd))]
 
 extern crate rand;
+#[macro_use]
 extern crate tuple;
 
 #[cfg(feature="simd")]
