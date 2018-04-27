@@ -3,7 +3,7 @@ use cast::Cast;
 use rand::{Rng};
 use rand::distributions::{IndependentSample, Range as Uniform};
 use std::fmt::Debug;
-use std::intrinsics::*;
+//use std::intrinsics::*;
 
 use tuple::*;
 //Float + NumCast + SampleRange + PartialOrd + Clone + Add + Debug

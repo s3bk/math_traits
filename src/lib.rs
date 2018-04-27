@@ -1,5 +1,4 @@
 #![feature(core_intrinsics)]
-#![feature(cfg_target_feature)]
 #![feature(inclusive_range_fields, inclusive_range)]
 #![feature(const_fn)]
 #![feature(concat_idents)]
