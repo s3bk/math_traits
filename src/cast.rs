@@ -13,6 +13,11 @@ pub trait Cast<O>: Sized {
     /// If Self is not in r, choose the nearest end of r.
     /// (returns r.start <= self as O <= r.end)
     fn cast_clamped(self, r: RangeInclusive<O>) -> O;
+    
+    /// Represent self as O
+    /// If Self is not in O, choose the nearest O to self.
+    /// (returns O::MIN_VALUE <= self as O <= O::MAX_VALUE)
+    fn cast_clamping(self) -> O;
 }
 
 macro_rules! impl_cast_unchecked {
@@ -43,6 +48,10 @@ macro_rules! impl_cast_unchecked {
                         v
                     }
                 }
+                #[inline(always)]
+                fn cast_clamping(self) -> $dst {
+                    self as $dst
+                }
             }
         )* )*
     )
@@ -54,9 +63,9 @@ macro_rules! impl_cast_checked {
             impl Cast<$dst> for $src {
                 #[inline(always)]
                 fn cast(self) -> Option<$dst> {
-        		    const MIN: $src = ::std::$dst::MIN as $src;
-                    const MAX: $src = ::std::$dst::MAX as $src;
-                    if self >= MIN && self <= MAX {
+        		    let min: $src = $dst::min_value() as $src;
+                    let max: $src = $dst::max_value() as $src;
+                    if self >= min && self <= max {
                         Some(self as $dst)
                     } else {
                         None
@@ -85,6 +94,14 @@ macro_rules! impl_cast_checked {
                         r.start
                     }
                 }
+                #[inline(always)]
+                fn cast_clamping(self) -> $dst {
+        		    let min: $src = $dst::min_value() as $src;
+                    let max: $src = $dst::max_value() as $src;
+                    if self < min { $dst::min_value() }
+                    else if self > max { $dst::max_value() }
+                    else { self as $dst }
+                }
             }
         )* )*
     )
@@ -95,10 +112,11 @@ fn test_clip_checked() {
     assert_eq!(8f32.cast_clipped(0u16..=5), None);
     assert_eq!(3f32.cast_clipped(0u16..=5), Some(3));
     assert_eq!(100f32.cast_clipped(0usize..=1000), Some(100));
+    assert_eq!(Cast::<u8>::cast_clamping(300i16), 255u8);
 }
 
 macro_rules! impl_cast_signed {
-    ($( $unsigned:ty, $signed:ty; )*) => (
+    ($( $unsigned:ident, $signed:ident; )*) => (
         $(
             impl Cast<$unsigned> for $signed {
                 #[inline(always)]
@@ -130,6 +148,14 @@ macro_rules! impl_cast_signed {
                         self as $unsigned
                     }
                 }
+                #[inline(always)]
+                fn cast_clamping(self) -> $unsigned {
+                    if self >= 0 {
+                        self as $unsigned
+                    } else {
+                        0
+                    }
+                }
             }
             impl Cast<$signed> for $unsigned {
                 #[inline(always)]
@@ -159,6 +185,15 @@ macro_rules! impl_cast_signed {
                         r.start
                     } else {
                         s
+                    }
+                }
+                #[inline(always)]
+                fn cast_clamping(self) -> $signed {
+                    let s = self as $signed;
+                    if s >= 0 {
+                        s
+                    } else {
+                        $signed::max_value()
                     }
                 }
             }
@@ -193,6 +228,11 @@ macro_rules! impl_cast_id {
                         b
                     }
                 }
+                #[inline(always)]
+                fn cast_clamping(self) -> $b {
+                    self as $b
+                }
+                
             }
             impl Cast<$a> for $b {
                 #[inline(always)]
@@ -218,6 +258,10 @@ macro_rules! impl_cast_id {
                     } else {
                         a
                     }
+                }
+                #[inline(always)]
+                fn cast_clamping(self) -> $a {
+                    self as $a
                 }
             }
         )*
@@ -302,9 +346,25 @@ macro_rules! impl_cast {
             fn cast_clamped(self, r: RangeInclusive<$Tuple<$($t),*>>) -> $Tuple<$($t),*> {
                 $Tuple( $(self.$idx.cast_clamped(r.start.$idx ..= r.end.$idx)),* )
             }
+            #[inline(always)]
+            fn cast_clamping(self) -> $Tuple<$($t),*> {
+                $Tuple( $(self.$idx.cast_clamping()),* )
+            }
         }
     )*)
 }
 
 impl_tuple!(impl_cast);
 
+trait MinMax {
+    fn min_value() -> Self;
+    fn max_value() -> Self;
+}
+impl MinMax for f32 {
+    fn min_value() -> f32 { ::std::f32::MIN }
+    fn max_value() -> f32 { ::std::f32::MAX }
+}
+impl MinMax for f64 {
+    fn min_value() -> f64 { ::std::f64::MIN }
+    fn max_value() -> f64 { ::std::f64::MAX }
+}
