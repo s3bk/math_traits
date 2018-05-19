@@ -1,4 +1,4 @@
-#![feature(inclusive_range_fields, inclusive_range)]
+#![feature(inclusive_range_methods, inclusive_range)]
 #![feature(const_fn)]
 #![feature(concat_idents)]
 #![cfg_attr(feature="simd", feature(stdsimd))]

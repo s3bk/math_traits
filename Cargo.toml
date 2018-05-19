@@ -6,9 +6,10 @@ license = "MIT"
 description = "traits to simplify vectorized mathematics"
 
 [dependencies]
-tuple = {version = "0.3.8", default-features = false}
+tuple = { version = "0.4", default-features = false, git = "https://github.com/s3bk/tuple.git" }
 rand = "0.4.1"
-stdsimd = {version = "0.0.4", optional = true}
+#stdsimd = {version = "0.0.4", optional = true}
+stdsimd = { git = "https://github.com/rust-lang-nursery/stdsimd.git", optional=true }
 
 [features]
 simd = ["tuple/impl_simd", "stdsimd"]

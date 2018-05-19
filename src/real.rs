@@ -180,7 +180,7 @@ macro_rules! impl_real {
 impl_real!(f32: fmaf32, f64: fmaf64);
 
 macro_rules! tuple_init {
-    ($($Tuple:ident { $($T:ident . $t:ident . $idx:tt),* } )*) => ($(
+    ($($Tuple:ident $Arr:ident { $($T:ident . $t:ident . $idx:tt),* } )*) => ($(
     
         impl<T: Real> Real for $Tuple<$(first_i!(T, $T),)*>
         {
