@@ -1,15 +1,15 @@
 [package]
 name = "math_traits"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Sebastian Köln <sebk@rynx.org>"]
 license = "MIT"
 description = "traits to simplify vectorized mathematics"
+repository = "https://gitlab.com/sebk/math_traits.git"
+homepage = "https://gitlab.com/sebk/math_traits"
 
 [dependencies]
-tuple = { version = "0.4", default-features = false, git = "https://github.com/s3bk/tuple.git" }
+tuple = { version = "0.4", default-features = false }
 rand = "0.4.1"
-#stdsimd = {version = "0.0.4", optional = true}
-stdsimd = { git = "https://github.com/rust-lang-nursery/stdsimd.git", optional=true }
 
 [features]
-simd = ["tuple/impl_simd", "stdsimd"]
+simd = ["tuple/impl_simd"]

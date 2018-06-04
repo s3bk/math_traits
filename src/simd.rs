@@ -1,6 +1,5 @@
 use std::mem::transmute;
-use stdsimd::simd::*;
-use stdsimd::arch::x86_64::*;
+use std::simd::*;
 use rand::Rng;
 use tuple::*;
 use real::Real;
@@ -10,14 +9,14 @@ use rand::distributions::{IndependentSample, Range as Uniform};
 macro_rules! call {
     ($pre:ident, $name:ident, $post:ident ( $($arg:expr),* ) ) => (
         unsafe {
-            use stdsimd::arch::x86_64::*;
+            use core::arch::x86_64::*;
             transmute(concat_idents!($pre, $name, $post)( $( transmute($arg) ),* ))
         }
     )
 }
 
 macro_rules! impl_simd {
-    ($($simd:ident: $scalar:ident, $bool:ty, $pre:ident ~ $post:ident, $Tuple:ident($($idx:tt)*));*) => ( $(
+    ($($size:tt, $simd:ident: $scalar:ident, $bool:ty, $pre:ident ~ $post:ident, $Tuple:ident($($idx:tt)*));*) => ( $(
         impl Real for $simd {
             const PI: Self = $simd::splat(::std::$scalar::consts::PI);
             type Bool = $bool;
@@ -31,9 +30,12 @@ macro_rules! impl_simd {
             
             #[inline(always)]
             fn values(self) -> Self::Iterator {
-                let mut arr = [$(first_e!(0., $idx)),*];
-                self.store(&mut arr, 0);
-                $Tuple::from(arr).into_elements()
+                #[repr(align($size))]
+                struct Arr([$scalar; 0$(+ first_e!(1, $idx))*]);
+            
+                let mut arr = Arr([$(first_e!(0., $idx)),*]);
+                self.store_aligned(&mut arr.0);
+                $Tuple::from(arr.0).into_elements()
             }
 
             #[inline(always)]
@@ -127,13 +129,13 @@ macro_rules! impl_simd {
 }
 
 #[cfg(target_feature = "mmx")]
-impl_simd!(f32x4: f32, i32x4, _mm_ ~ _ps, T4(0 1 2 3));
+impl_simd!(16, f32x4: f32, m32x4, _mm_ ~ _ps, T4(0 1 2 3));
 
 #[cfg(target_feature = "sse2")]
-impl_simd!(f64x2: f64, i64x2, _mm_ ~ _pd, T2(0 1));
+impl_simd!(16, f64x2: f64, m64x2, _mm_ ~ _pd, T2(0 1));
 
 #[cfg(target_feature = "avx")]
 impl_simd!(
-    f32x8: f32, i32x8, _mm256_ ~ _ps, T8(0 1 2 3 4 5 6 7);
-    f64x4: f64, i64x4, _mm256_ ~ _pd, T4(0 1 2 3)
+    32, f32x8: f32, i32x8, _mm256_ ~ _ps, T8(0 1 2 3 4 5 6 7);
+    32, f64x4: f64, i64x4, _mm256_ ~ _pd, T4(0 1 2 3)
 );
