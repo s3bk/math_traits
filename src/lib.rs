@@ -1,10 +1,9 @@
-#![feature(inclusive_range_methods, inclusive_range)]
+#![feature(core_intrinsics)]
 #![feature(const_fn)]
 #![feature(concat_idents)]
 #![cfg_attr(feature="simd", feature(stdsimd))]
 
 extern crate rand;
-#[macro_use]
 extern crate tuple;
 #[cfg(feature="simd")]
 extern crate core;
