@@ -1,15 +1,13 @@
 use std::mem::transmute;
-use std::simd::*;
 use rand::Rng;
 use tuple::*;
 use real::Real;
-use rand::distributions::{IndependentSample, Range as Uniform};
 
 // highly unsafe macro
 macro_rules! call {
     ($pre:ident, $name:ident, $post:ident ( $($arg:expr),* ) ) => (
         unsafe {
-            use core::arch::x86_64::*;
+            use std::arch::x86_64::*;
             transmute(concat_idents!($pre, $name, $post)( $( transmute($arg) ),* ))
         }
     )
@@ -34,7 +32,7 @@ macro_rules! impl_simd {
                 struct Arr([$scalar; 0$(+ first_e!(1, $idx))*]);
             
                 let mut arr = Arr([$(first_e!(0., $idx)),*]);
-                self.store_aligned(&mut arr.0);
+                self.store(&mut arr.0, 0);
                 $Tuple::from(arr.0).into_elements()
             }
 
@@ -56,8 +54,7 @@ macro_rules! impl_simd {
             }
             
             fn uniform01<R: Rng>(rng: &mut R) -> Self {
-                let uniform01 = Uniform::new(0., 1.);
-                $simd::new($(first_e!(uniform01.ind_sample(rng), $idx)),*)
+                $simd::new($(first_e!(rng.gen(), $idx)),*)
             }
 /*
             #[cfg(target_feature="fma")]
@@ -128,14 +125,18 @@ macro_rules! impl_simd {
     )* )
 }
 
-#[cfg(target_feature = "mmx")]
-impl_simd!(16, f32x4: f32, m32x4, _mm_ ~ _ps, T4(0 1 2 3));
+use simd_::*;
+impl_simd!(16, f32x4: f32, bool32fx4, _mm_ ~ _ps, T4(0 1 2 3));
 
 #[cfg(target_feature = "sse2")]
-impl_simd!(16, f64x2: f64, m64x2, _mm_ ~ _pd, T2(0 1));
+use simd_::x86::sse2::*;
+#[cfg(target_feature = "sse2")]
+impl_simd!(16, f64x2: f64, bool64fx2, _mm_ ~ _pd, T2(0 1));
 
 #[cfg(target_feature = "avx")]
+use simd_::x86::avx::*;
+#[cfg(target_feature = "avx")]
 impl_simd!(
-    32, f32x8: f32, i32x8, _mm256_ ~ _ps, T8(0 1 2 3 4 5 6 7);
-    32, f64x4: f64, i64x4, _mm256_ ~ _pd, T4(0 1 2 3)
+    32, f32x8: f32, bool32fx8, _mm256_ ~ _ps, T8(0 1 2 3 4 5 6 7);
+    32, f64x4: f64, bool64fx4, _mm256_ ~ _pd, T4(0 1 2 3)
 );

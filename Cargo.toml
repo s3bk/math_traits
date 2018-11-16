@@ -1,6 +1,6 @@
 [package]
 name = "math_traits"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Sebastian Köln <sebk@rynx.org>"]
 license = "MIT"
 description = "traits to simplify vectorized mathematics"
@@ -10,6 +10,7 @@ homepage = "https://gitlab.com/sebk/math_traits"
 [dependencies]
 tuple = { version = "0.4", default-features = false }
 rand = "0.6"
+simd = { version = "0.2", optional = true }
 
 [features]
-simd = ["tuple/impl_simd"]
+impl_simd = ["tuple/impl_simd", "simd"]
