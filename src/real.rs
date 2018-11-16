@@ -1,7 +1,6 @@
 use std::ops::{Add, Sub, Mul, Div};
 use cast::Cast;
 use rand::{Rng};
-use rand::distributions::{IndependentSample, Range as Uniform};
 use std::fmt::Debug;
 use std::intrinsics::{fmaf32, fmaf64};
 use tuple::*;
@@ -115,8 +114,7 @@ macro_rules! impl_real {
             }
             #[inline]
             fn uniform01<R: Rng>(rng: &mut R) -> Self {
-                let uniform01 = Uniform::new(0., 1.);
-                uniform01.ind_sample(rng)
+                rng.gen()
             }
 
             #[cfg(target_feature="fma")]
