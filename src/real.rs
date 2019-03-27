@@ -2,8 +2,8 @@ use std::ops::{Add, Sub, Mul, Div};
 use cast::Cast;
 use rand::{Rng};
 use std::fmt::Debug;
-use std::intrinsics::{fmaf32, fmaf64};
 use tuple::*;
+
 //Float + NumCast + SampleRange + PartialOrd + Clone + Add + Debug
 pub trait Real:
     Sized + Copy + Debug
@@ -120,7 +120,8 @@ macro_rules! impl_real {
             #[cfg(target_feature="fma")]
             #[inline]
             fn mul_add(self, b: Self, c: Self) -> Self {
-                unsafe { $fma(self, b, c) }
+                use std::intrinsics;
+                unsafe { intrinsics::$fma(self, b, c) }
             }
             
             #[inline(always)]

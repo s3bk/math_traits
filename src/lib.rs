@@ -6,7 +6,7 @@
 extern crate rand;
 extern crate tuple;
 #[cfg(feature="simd")]
-extern crate simd as simd_;
+extern crate packed_simd as simd_;
 
 macro_rules! first_t {
     ($A:ty, $B:tt) => ($A)
