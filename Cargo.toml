@@ -8,7 +8,7 @@ repository = "https://gitlab.com/sebk/math_traits.git"
 homepage = "https://gitlab.com/sebk/math_traits"
 
 [dependencies]
-tuple = { version = "0.4", default-features = false, path="../tuple" }
+tuple = { version = "0.4", default-features = false, git = "https://gitlab.com/sebk/tuple" }
 rand = "0.6"
 packed_simd = { version = "0.3", optional = true }
 
